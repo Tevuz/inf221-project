@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Main where
 
 import Graphics.Gloss
@@ -15,18 +17,19 @@ background = black
 
 frame :: Time -> Picture
 frame time = Pictures $
-    map (tower time) towers
+    map (drawTower time) towers
 
-towers :: [Point]
+
+data Tower = Tower { position :: Point }
+towers :: [Tower]
 towers =
-    [ ( 0,  0)
-    , (90, 30)
-    , (30, 90)
+    [ Tower (0,  0)
     ]
 
-tower :: Time -> Point -> Picture
-tower time position =
-    uncurry translate position $ Pictures
-    [ color white $ Circle 20
+drawTower :: Time -> Tower -> Picture
+drawTower time tower =
+    uncurry translate (position tower) $ Pictures
+    [ color white $ Line [ (-20, -20), (20, -20), (20, 20), (-20, 20), (-20, -20) ]
+    , color white $ Circle 20
     , color white $ Line [ (0, 0), (sin (time * 3.1415 / 60.0) * 20, cos (time * 3.1415 / 60.0) * 20) ]
     ]
