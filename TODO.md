@@ -18,7 +18,6 @@
 - [ ] Win & loss condition
 
 ### In progress
-- [ ] Path
 - [ ] Enemy rendering
 
 ### Done
@@ -27,3 +26,4 @@
 - [X] Display window and draw shapes
 - [X] Simple sprite rendering
 - [X] Tower rendering
+- [X] Path
