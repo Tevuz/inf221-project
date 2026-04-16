@@ -1,7 +1,9 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
+import Data.Maybe
 import Graphics.Gloss
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Geometry.Angle
@@ -22,6 +24,7 @@ frame :: Time -> Picture
 frame time = Pictures $
        [Color yellow $ drawPath path]
     ++ map (drawTower time) towers
+    ++ map (drawEnemy time) enemies
 
 square :: Float -> Float
 square x = x * x
@@ -85,6 +88,16 @@ towers =
     [ Tower (0,  0)
     ]
 
+data Enemy = Enemy { progress :: Float }
+enemies :: [Enemy]
+enemies =
+    [ Enemy { progress = -0.0 }
+    , Enemy { progress = -60.0 }
+    , Enemy { progress = -120.0 }
+    , Enemy { progress = -180.0 }
+    , Enemy { progress = -240.0 }
+    ]
+
 drawTower :: Time -> Tower -> Picture
 drawTower time tower =
     uncurry translate (position tower) $ Pictures
@@ -106,6 +119,12 @@ pathPoint (segment : tail) t
     | t <= l = Just $ segmentPoint segment (t / l)
     | otherwise = pathPoint tail (t - l)
     where l = segmentLength segment
+
+drawEnemy :: Time -> Enemy -> Picture
+drawEnemy time Enemy { progress } =
+    uncurry translate position $ color red $ Circle 16
+    where
+        position = fromMaybe (0, 0) $ pathPoint path $ clamp 0 pathLength (time * 60.0 + progress)
 
 drawPath :: [Segment] -> Picture
 drawPath [] = Blank

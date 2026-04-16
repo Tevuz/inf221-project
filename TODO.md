@@ -18,7 +18,7 @@
 - [ ] Win & loss condition
 
 ### In progress
-- [ ] Enemy rendering
+- [ ] Refactor into modules
 
 ### Done
 - [X] Setup dev environment
@@ -27,3 +27,4 @@
 - [X] Simple sprite rendering
 - [X] Tower rendering
 - [X] Path
+- [X] Enemy rendering
