@@ -22,6 +22,7 @@ executable TowerDefence
     -- other-extensions:
     build-depends:
         base ^>=4.18.3.0,
-        gloss
+        gloss,
+        linear
     hs-source-dirs:   app
     default-language: Haskell2010

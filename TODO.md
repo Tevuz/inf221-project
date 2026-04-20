@@ -28,3 +28,4 @@
 - [X] Tower rendering
 - [X] Path
 - [X] Enemy rendering
+- [X] Add dependency: linear

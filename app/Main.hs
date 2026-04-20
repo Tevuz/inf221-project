@@ -1,13 +1,17 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 module Main where
 
-import Data.Maybe
 import Graphics.Gloss
-import Graphics.Gloss.Data.Vector
-import Graphics.Gloss.Geometry.Angle
-import qualified Graphics.Gloss.Data.Point.Arithmetic as Vec
+
+import Linear.V2
+import Linear.Metric
+import Linear.Vector
+
+type Float2 = V2 Float
+type Path = [Float2]
 
 type Time = Float
 
@@ -29,41 +33,36 @@ frame time = Pictures $
 square :: Float -> Float
 square x = x * x
 
-distance :: Point -> Point -> Float
-distance (x0, y0) (x1, y1) = sqrt (square (x1 - x0) + square (y1 - y0))
-
 pathRadius :: Float
 pathRadius = 20
 
-pathPoints :: Path
-pathPoints = [ (-360, -60), (-120, -60), (-60, 60), (60, 60), (120, -60), (360, -60) ]
---pathPoints = [ (-300, -60), (-60, -60), (0, 60), (60, -60), (300, -60) ]
+pathPoints :: Main.Path
+pathPoints = map (uncurry V2) [ (-360, -60), (-120, -60), (-60, 60), (60, 60), (120, -60), (360, -60) ]
+--pathPoints = map (uncurry V2)  [ (-300, -60), (-120, -60), (0, 120), (120, -60), (300, -60) ]
 
 data Segment
-    = Linear (Point, Point)
-    | Spherical (Point, Point, Point)
+    = Linear (Float2, Float2)
+    | Spherical (Float2, Float2, Float2)
 
-pathInsertCorners :: Path -> [Segment]
+pathInsertCorners :: Main.Path -> [Segment]
 pathInsertCorners [] = []
 pathInsertCorners [a] = [Linear (a, a)]
 pathInsertCorners [a, b] = [Linear (lerp 0.5 a b, b)]
 pathInsertCorners (a : b : c : tail)
-    | abs det < 1e-8 = Linear (am, cm) : pathInsertCorners (b : c : tail)
+    | quadrance t < 1e-8 = Linear (am, cm) : pathInsertCorners (b : c : tail)
     | otherwise      = [Linear (am, b0), Spherical (b0, b1, b'), Linear (b1, cm)] ++ pathInsertCorners (b : c : tail)
     where
-        r = pathRadius
-        lab = distance a b
-        lcd = distance b c
+        ab_ = norm (a - b)
+        cb_ = norm (c - b)
+        r = min (min pathRadius pathRadius) (0.5 * min ab_ cb_)
         am = lerp 0.5 a b
-        b0 = lerp (1 - r / lab) a b
-        b1 = lerp (    r / lcd) b c
-        cm = lerp 0.5 b c
-        baT = (\ (x, y) -> (-y, x)) (a Vec.- b)
-        bcT = (\ (x, y) -> (-y, x)) (c Vec.- b)
-        det = detV baT bcT
-        b' = b0 Vec.+ mulSV (detV (b1 Vec.- b0) bcT / det) baT
+        cm = lerp 0.5 c b
+        t = normalize ((a - b) ^/ ab_) + ((c - b) ^/ cb_)
+        b' = b + r / abs (crossZ t ((a - b) ^/ ab_)) *^ t
+        b0 = b + project (a - b) (b' - b)
+        b1 = b + project (c - b) (b' - b)
 
-pathInsertCornersInit :: Path -> [Segment]
+pathInsertCornersInit :: Main.Path -> [Segment]
 pathInsertCornersInit [] = []
 pathInsertCornersInit [a] = [Linear (a, a)]
 pathInsertCornersInit [a, b] = [Linear (a, b)]
@@ -75,9 +74,9 @@ path = pathInsertCornersInit pathPoints
 segmentLength :: Segment -> Float
 segmentLength (Linear (p, q)) = distance p q
 segmentLength (Spherical (p, q, c)) =
-    let p' = p Vec.- c
-        q' = q Vec.- c
-    in  acos (dotV p' q' / (magV p' * magV q')) * magV p'
+    let p' = p - c
+        q' = q - c
+    in  acos (dot p' q' / (norm p' * norm q')) * norm p'
 
 pathLength :: Float
 pathLength = sum $ map segmentLength path
@@ -106,57 +105,52 @@ drawTower time tower =
     , color white $ Line [ (0, 0), (sin (time * 3.1415 / 60.0) * 20, cos (time * 3.1415 / 60.0) * 20) ]
     ]
 
-segmentPoint :: Segment -> Float -> Point
+segmentPoint :: Segment -> Float -> Float2
 segmentPoint (Linear (p, q)) t = lerp t p q
-segmentPoint (Spherical (p, q, c)) t = slerp t (p Vec.- c) (q Vec.- c) Vec.+ c
+segmentPoint (Spherical (p, q, c)) t = c + slerp t (p - c) (q - c)
 
-pathPoint :: [Segment] -> Float -> Maybe Point
+pathPoint :: [Segment] -> Float -> Maybe Float2
 pathPoint [] _ = Nothing
-pathPoint [segment] t =
-    Just $ segmentPoint segment (clamp 0 1 $ t / l)
-    where l = segmentLength segment
 pathPoint (segment : tail) t
-    | t <= l = Just $ segmentPoint segment (t / l)
+    | t < 0    = Nothing
+    | t <= l    = Just $ segmentPoint segment (t / l)
     | otherwise = pathPoint tail (t - l)
     where l = segmentLength segment
 
 drawEnemy :: Time -> Enemy -> Picture
-drawEnemy time Enemy { progress } =
-    uncurry translate position $ color red $ Circle 16
+drawEnemy time Enemy { progress }
+    | Just pos <- position = uncurry translate (toPair pos) $ color red $ Circle 16
+    | otherwise = Blank
     where
-        position = fromMaybe (0, 0) $ pathPoint path $ clamp 0 pathLength (time * 60.0 + progress)
+        position = pathPoint path $ time * 60.0 + progress
 
 drawPath :: [Segment] -> Picture
 drawPath [] = Blank
-drawPath (Linear (p, q) : tail) = Pictures [Line [p, q], drawPath tail]
+drawPath (Linear (p, q) : tail) = Pictures [Line [toPair p, toPair q], drawPath tail]
 drawPath (Spherical (p, q, c) : tail) = Pictures
-    [ uncurry translate c $ uncurry Arc (minmax (pa, qa)) r
+    [ uncurry translate (toPair c) $ Arc pa qa (distance p c)
     , drawPath tail
     ]
     where
-        r = magV (p Vec.- c)
-        p' = p Vec.- c
-        q' = q Vec.- c
-        pa = angle p'
-        qa = angle q'
+        (pa, qa) = minmax (toAngle (p - c), toAngle (q - c))
 
-lerp :: Float -> Point -> Point -> Point
-lerp i (x0, y0) (x1, y1) = (x0 + i * (x1 - x0), y0 + i * (y1 - y0))
-
-slerp :: Float -> Point -> Point -> Point
-slerp i p q =
-    let theta = acos (dotV p q / (magV p * magV q))
+slerp :: Float -> Float2 -> Float2 -> Float2
+slerp i p q = p ^* pf + q ^* qf
+    where
+        theta = acos (dot p q / (norm p * norm q))
         pf    = sin (theta - i * theta) / sin theta
         qf    = sin (        i * theta) / sin theta
-    in  mulSV pf p Vec.+ mulSV qf q
-
-clamp :: Float -> Float -> Float -> Float
-clamp a b x = max a $ min b x
-
-angle :: Point -> Float
-angle (x, y) = radToDeg (atan2 y x)
 
 minmax :: (Float, Float) -> (Float, Float)
 minmax (a, b)
     | a < b     = (a, b)
     | otherwise = (b, a)
+
+toPair :: Float2 -> (Float, Float)
+toPair (V2 x y) = (x, y)
+
+toAngle :: Float2 -> Float
+toAngle (V2 x y) = atan2 y x * 180 / pi
+
+rot90 :: Float2 -> Float2
+rot90 (V2 x y) = V2 (-y) x
