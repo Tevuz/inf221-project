@@ -11,7 +11,6 @@
 - [ ] User interface
 - [ ] Waves
 - [ ] Win & loss condition
-- [ ] Refactor into modules
 
 ### In progress
 - [ ] Enemy Health
@@ -26,3 +25,4 @@
 - [X] Path
 - [X] Enemy rendering
 - [X] Add dependency: linear
+- [X] Refactor into modules
