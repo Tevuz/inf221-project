@@ -1,10 +1,11 @@
-{- HLINT ignore "Use newtype instead of data" -}
-module Game.Domain.Path
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+module Game.Components.Path
     ( Path(..)
     , createPath
     , pathLength
     , pathStart
     , pathEnd
+    , pathPoint
     ) where
 
 import Linear.V2
@@ -32,6 +33,18 @@ pathEnd path = segmentStart $ last (segments path)
 
 pathRadius :: Float
 pathRadius = 20
+
+segmentPoint :: Segment -> Float -> Float2
+segmentPoint (Linear (p, q)) t = lerp t p q
+segmentPoint (Spherical (p, q, c)) t = c + slerp t (p - c) (q - c)
+
+pathPoint :: [Segment] -> Float -> Maybe Float2
+pathPoint [] _ = Nothing
+pathPoint (segment : tail) t
+    | t < 0    = Nothing
+    | t <= l    = Just $ segmentPoint segment (t / l)
+    | otherwise = pathPoint tail (t - l)
+    where l = segmentLength segment
 
 pathInsertCorners :: [Float2] -> [Segment]
 pathInsertCorners [] = []

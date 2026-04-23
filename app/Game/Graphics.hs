@@ -8,17 +8,17 @@ import Linear.Metric
 import Game.Util
 import Game.Type
 
-import Game.Domain.Enemy
-import Game.Domain.Path
-import Game.Domain.Tower
+import Game.Components.Enemy as Enemy
+import Game.Components.Tower as Tower
+import Game.Components.Path as Path
 
 drawEnemy :: Time -> [Segment] -> Enemy -> Picture
 drawEnemy time path enemy
-    | Just pos <- position = uncurry translate (toPair pos) $ color red $ Circle 16
+    | Just pos <- position = uncurry translate (toPair pos) $ color col $ Circle 16
     | otherwise = Blank
     where
         position = pathPoint path $ progress enemy
---        col = if any (inRange time enemy) towers then green else red
+        col = makeColor 1.0 (health enemy / 20.0) 0.0 1.0
 
 drawPath :: [Segment] -> Picture
 drawPath [] = Blank
@@ -40,25 +40,18 @@ drawPath (Spherical (p, q, c) : tail) = Pictures
 drawTower :: Time -> Tower -> Picture
 drawTower time tower =
     Pictures
-    [   uncurry translate (position tower) $ Pictures
+    [   uncurry translate (toPair $ Tower.position tower) $ Pictures
         [   color white $ Line [ (-20, -20), (20, -20), (20, 20), (-20, 20), (-20, -20) ]
         ,   color white $ Circle 20
         ,   color cyan $ Circle (range tower)
         ,   color white $ Line [ (0, 0), (sin (time * 3.1415 / 60.0) * 20, cos (time * 3.1415 / 60.0) * 20) ]
         ]
+    ,   let ep = Enemy.position <$> target tower
+            tp = toPair $ Tower.position tower
+        in case ep of
+            Just (Just ep) -> color cyan $ Line [tp, toPair ep]
+            _ -> Blank
     ]
-
-segmentPoint :: Segment -> Float -> Float2
-segmentPoint (Linear (p, q)) t = lerp t p q
-segmentPoint (Spherical (p, q, c)) t = c + slerp t (p - c) (q - c)
-
-pathPoint :: [Segment] -> Float -> Maybe Float2
-pathPoint [] _ = Nothing
-pathPoint (segment : tail) t
-    | t < 0    = Nothing
-    | t <= l    = Just $ segmentPoint segment (t / l)
-    | otherwise = pathPoint tail (t - l)
-    where l = segmentLength segment
 
 --inRange :: Time -> Enemy -> Tower -> Bool
 --inRange time enemy tower = any (\(a, b) -> a < t && t < b) (area Tower)

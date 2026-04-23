@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-module Game.Domain.Tower (Tower(..), createTower) where
+module Game.Components.Tower (Tower(..), createTower) where
 
 import Linear.V2
 import Linear.Metric
@@ -7,11 +7,18 @@ import Linear.Vector
 
 import Game.Util
 import Game.Type
-import Game.Domain.Path
+import Game.Components.Enemy
+import Game.Components.Path
 
-data Tower = Tower { position :: (Float, Float), range :: Float, area :: [(Float, Float)] }
+data Tower = Tower
+    { position :: Float2
+    , range :: Float
+    , area :: [(Float, Float)]
+    , target :: Maybe Enemy
+    }
+
 createTower :: (Float, Float) -> Float -> Path -> Tower
-createTower pos range path = Tower pos range (calcArea path pos range)
+createTower pos range path = Tower (uncurry V2 pos) range (calcArea path pos range) Nothing
 
 calcArea :: Path -> (Float, Float) -> Float -> [(Float, Float)]
 calcArea path (x, y) range = pairwise
