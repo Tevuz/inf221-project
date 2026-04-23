@@ -5,20 +5,17 @@
 
 ### To do
 - [ ] Add dependency: yampa
-- [ ] Enemies
-  - [ ] Health
 - [ ] Tilemap
-  - [ ] Placeable
-- [ ] Towers
-  - [ ] Attack
-  - [ ] Placement
-  - [ ] Upgrades
+- [ ] Tower Placement
+- [ ] Tower Upgrades
 - [ ] User interface
 - [ ] Waves
 - [ ] Win & loss condition
+- [ ] Refactor into modules
 
 ### In progress
-- [ ] Refactor into modules
+- [ ] Enemy Health
+- [ ] Tower Attack
 
 ### Done
 - [X] Setup dev environment

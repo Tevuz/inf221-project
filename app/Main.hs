@@ -37,7 +37,8 @@ pathRadius :: Float
 pathRadius = 20
 
 pathPoints :: Main.Path
-pathPoints = map (uncurry V2) [ (-360, -60), (-120, -60), (-60, 60), (60, 60), (120, -60), (360, -60) ]
+--pathPoints = map (uncurry V2) [ (-360, -60), (-120, -60), (-60, 60), (60, 60), (120, -60), (360, -60) ]
+pathPoints = map (uncurry V2) [ (-360, -60), (-150, -60), (-90, 60), (90, 60), (150, -60), (360, -60), (360, 60), (150, 60), (90, -60), (-90, -60), (-150, 60), (-360, 60) ]
 --pathPoints = map (uncurry V2)  [ (-300, -60), (-120, -60), (0, 120), (120, -60), (300, -60) ]
 
 data Segment
@@ -70,6 +71,8 @@ pathInsertCornersInit (a : b : tail) = Linear (a, lerp 0.5 a b) : pathInsertCorn
 
 path :: [Segment]
 path = pathInsertCornersInit pathPoints
+--path = [Linear (V2 (-360) (-60), V2 360 (-60))]
+--path = [Spherical (V2 (-360) (-240), V2 360 (-240), V2 0 (-480))]
 
 segmentLength :: Segment -> Float
 segmentLength (Linear (p, q)) = distance p q
@@ -81,11 +84,79 @@ segmentLength (Spherical (p, q, c)) =
 pathLength :: Float
 pathLength = sum $ map segmentLength path
 
-data Tower = Tower { position :: Point }
+segmentStart :: Segment -> Float2
+segmentStart (Linear (p, _)) = p
+segmentStart (Spherical (p, _, _)) = p
+
+segmentEnd :: Segment -> Float2
+segmentEnd (Linear (_, q)) = q
+segmentEnd (Spherical (_, q, _)) = q
+
+pathIntersect :: Point -> Float -> [Segment] -> Float -> [Float]
+pathIntersect _ _ [] _ = []
+pathIntersect (x, y) r (Linear (p, q) : tail) t
+    | d <= 0    = pathIntersect (x, y) r tail t'
+    | otherwise =
+        let s = sqrt d
+            p = (-b - s) / (2 * a)
+            q = (-b + s) / (2 * a)
+        in [t + l * p | 0 < p && p < 1] ++ [t + l * q | 0 < q && q < 1] ++ pathIntersect (x, y) r tail t'
+    where
+        t' = t + segmentLength (Linear (p, q))
+        pq = q - p
+        cp = p - V2 x y
+        l = norm pq
+        a = dot pq pq
+        b = 2 * dot pq cp
+        c = dot cp cp - r * r
+        d = b * b - 4 * a * c
+
+pathIntersect (x, y) r0 (Spherical (p, q, c) : tail) t =
+    let t' = t + segmentLength (Spherical (p, q, c))
+        v = V2 x y - c
+        d = norm v
+        r1 = distance p c
+    in  if d > r0 + r1 || d < abs (r1 - r0) || d == 0 && r0 == r1
+        then pathIntersect (x, y) r0 tail t'
+    else
+    let a = (r1 * r1 - r0 * r0 + d * d) / (2 * d)
+        h2 = r1 * r1 - a * a
+    in if h2 < 0
+        then pathIntersect (x, y) r0 tail t'
+    else
+    let h = sqrt h2
+
+        m = v ^* (a / d)
+        mt = rot90 v ^* (h / d)
+
+        pa = toAngle (p - c)
+        qa = toAngle (q - c)
+
+        at = (toAngle (m + mt) - pa) / (qa - pa)
+        bt = (toAngle (m - mt) - pa) / (qa - pa)
+    in [t + (t' - t) * at | 0 < at && at < 1]
+    ++ [t + (t' - t) * bt | 0 < bt && bt < 1]
+    ++ pathIntersect (x, y) r0 tail t'
+
+calcArea :: Point -> Float -> [(Float, Float)]
+calcArea (x, y) range = pairwise
+    (  [0 | distance (V2 x y) (segmentStart $ head path) < range]
+    ++ pathIntersect (x, y) range path 0
+    ++ [1 | distance (V2 x y) (segmentEnd $ last path) < range])
+
+data Tower = Tower { position :: Point, range :: Float, area :: [(Float, Float)] }
+createTower :: Point -> Float -> Tower
+createTower pos range = Tower pos range (calcArea pos range)
+
 towers :: [Tower]
 towers =
-    [ Tower (0,  0)
+    [ createTower (-180,  0) 80
+    , createTower (   0,  0) 80
+    , createTower ( 180,  0) 80
     ]
+
+areaCoverage :: [(Float, Float, Tower)]
+areaCoverage = concatMap (\tower -> map (\(a, b) -> (a, b, tower)) (area tower)) towers
 
 data Enemy = Enemy { progress :: Float }
 enemies :: [Enemy]
@@ -99,11 +170,23 @@ enemies =
 
 drawTower :: Time -> Tower -> Picture
 drawTower time tower =
-    uncurry translate (position tower) $ Pictures
-    [ color white $ Line [ (-20, -20), (20, -20), (20, 20), (-20, 20), (-20, -20) ]
-    , color white $ Circle 20
-    , color white $ Line [ (0, 0), (sin (time * 3.1415 / 60.0) * 20, cos (time * 3.1415 / 60.0) * 20) ]
+    Pictures
+    [   uncurry translate (position tower) $ Pictures
+        [   color white $ Line [ (-20, -20), (20, -20), (20, 20), (-20, 20), (-20, -20) ]
+        ,   color white $ Circle 20
+        ,   color cyan $ Circle (range tower)
+        ,   color white $ Line [ (0, 0), (sin (time * 3.1415 / 60.0) * 20, cos (time * 3.1415 / 60.0) * 20) ]
+        ]
+    ,   color green $ drawPointOnPath (concatMap (\(x, y) -> [x, y]) $ area tower)
     ]
+
+drawPointOnPath :: [Float] -> Picture
+drawPointOnPath [] = Blank
+drawPointOnPath (t : tail)
+    | Just pos <- position = Pictures [uncurry translate (toPair pos) $ Circle 5, drawPointOnPath tail]
+    | otherwise = Blank
+    where
+        position = pathPoint path t
 
 segmentPoint :: Segment -> Float -> Float2
 segmentPoint (Linear (p, q)) t = lerp t p q
@@ -119,17 +202,26 @@ pathPoint (segment : tail) t
 
 drawEnemy :: Time -> Enemy -> Picture
 drawEnemy time Enemy { progress }
-    | Just pos <- position = uncurry translate (toPair pos) $ color red $ Circle 16
+    | Just pos <- position = uncurry translate (toPair pos) $ color col $ Circle 16
     | otherwise = Blank
     where
-        position = pathPoint path $ time * 60.0 + progress
+        t = time * 60.0 + progress
+        position = pathPoint path $ t
+        col = if any (\(a, b, _) -> a < t && t < b) areaCoverage then green else red
 
 drawPath :: [Segment] -> Picture
 drawPath [] = Blank
-drawPath (Linear (p, q) : tail) = Pictures [Line [toPair p, toPair q], drawPath tail]
+drawPath (Linear (p, q) : tail) = Pictures
+    [   Line [toPair p, toPair q]
+    ,   uncurry translate (toPair p) $ color orange $ Circle 2
+    ,   uncurry translate (toPair q) $ color orange $ Circle 2
+    ,   drawPath tail
+    ]
 drawPath (Spherical (p, q, c) : tail) = Pictures
-    [ uncurry translate (toPair c) $ Arc pa qa (distance p c)
-    , drawPath tail
+    [   uncurry translate (toPair c) $ Arc pa qa (distance p c)
+    ,   uncurry translate (toPair p) $ color orange $ Circle 2
+    ,   uncurry translate (toPair q) $ color orange $ Circle 2
+    ,   drawPath tail
     ]
     where
         (pa, qa) = minmax (toAngle (p - c), toAngle (q - c))
@@ -154,3 +246,7 @@ toAngle (V2 x y) = atan2 y x * 180 / pi
 
 rot90 :: Float2 -> Float2
 rot90 (V2 x y) = V2 (-y) x
+
+pairwise :: [a] -> [(a, a)]
+pairwise (a : b : tail) = (a, b) : pairwise tail
+pairwise _ = []
