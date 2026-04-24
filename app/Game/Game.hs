@@ -6,6 +6,8 @@ module Game.Game
     , initial
     ) where
 
+import Control.Lens
+
 import qualified Graphics.Gloss as Gloss
 import Graphics.Gloss.Interface.IO.Game
 import Linear.V2
@@ -33,31 +35,31 @@ update delta gs =
     gs
 
 tick :: Float -> GameState -> GameState
-tick delta gs = gs { time = time gs + delta }
+tick delta gs = gs & time +~ delta
 
 render :: GameState -> Gloss.Picture
 render gs = Gloss.Pictures $
-       [Gloss.Color Gloss.yellow $ drawPath (segments (path gs))]
-    ++ map (drawTower (time gs)) (towers gs)
-    ++ map (drawEnemy (time gs) (segments (path gs))) (enemies gs)
+       [Gloss.Color Gloss.yellow $ drawPath (gs ^. (path . segments))]
+    ++ map (drawTower (gs ^. time)) (gs ^. towers)
+    ++ map (drawEnemy (gs ^. time) (gs ^. (path . segments))) (gs ^. enemies)
 
 
 initial :: GameState
 initial = GameState
-    { towers =
+    { _towers =
         [ createTower (-180,  0) 80 initialPath
         , createTower (   0,  0) 80 initialPath
         , createTower ( 180,  0) 80 initialPath
         ]
-    , enemies =
-        [ defaultEnemy { progress =   -0.0, Enemy.position = Nothing }
-        , defaultEnemy { progress =  -60.0, Enemy.position = Nothing  }
-        , defaultEnemy { progress = -120.0, Enemy.position = Nothing  }
-        , defaultEnemy { progress = -180.0, Enemy.position = Nothing  }
-        , defaultEnemy { progress = -240.0, Enemy.position = Nothing  }
+    , _enemies =
+        [ defaultEnemy { _progress =   -0.0, Enemy._position = Nothing }
+        , defaultEnemy { _progress =  -60.0, Enemy._position = Nothing  }
+        , defaultEnemy { _progress = -120.0, Enemy._position = Nothing  }
+        , defaultEnemy { _progress = -180.0, Enemy._position = Nothing  }
+        , defaultEnemy { _progress = -240.0, Enemy._position = Nothing  }
         ]
-    , path = initialPath
-    , time = 0
+    , _path = initialPath
+    , _time = 0
     }
 
 pathPoints :: [Float2]

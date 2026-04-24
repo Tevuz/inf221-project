@@ -1,5 +1,15 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-module Game.Components.Tower (Tower(..), createTower) where
+module Game.Components.Tower
+    ( Tower(..)
+    , createTower
+    , position
+    , range
+    , area
+    , target
+    ) where
+
+import Control.Lens
 
 import Linear.V2
 import Linear.Metric
@@ -7,15 +17,16 @@ import Linear.Vector
 
 import Game.Util
 import Game.Type
-import Game.Components.Enemy
+import Game.Components.Enemy hiding (position)
 import Game.Components.Path
 
 data Tower = Tower
-    { position :: Float2
-    , range :: Float
-    , area :: [(Float, Float)]
-    , target :: Maybe Enemy
+    { _position :: Float2
+    , _range :: Float
+    , _area :: [(Float, Float)]
+    , _target :: Maybe Enemy
     }
+makeLenses ''Tower
 
 createTower :: (Float, Float) -> Float -> Path -> Tower
 createTower pos range path = Tower (uncurry V2 pos) range (calcArea path pos range) Nothing
@@ -23,7 +34,7 @@ createTower pos range path = Tower (uncurry V2 pos) range (calcArea path pos ran
 calcArea :: Path -> (Float, Float) -> Float -> [(Float, Float)]
 calcArea path (x, y) range = pairwise
     (  [0 | distance (V2 x y) (pathStart path) < range]
-    ++ pathIntersect (x, y) range (segments path) 0
+    ++ pathIntersect (x, y) range (path ^. segments) 0
     ++ [1 | distance (V2 x y) (pathEnd path) < range])
 
 pathIntersect :: (Float, Float) -> Float -> [Segment] -> Float -> [Float]

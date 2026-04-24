@@ -33,6 +33,7 @@ executable TowerDefence
     build-depends:
         base ^>=4.18.3.0,
         gloss,
-        linear
+        linear,
+        lens
     hs-source-dirs:   app
     default-language: Haskell2010

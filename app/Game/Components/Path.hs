@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 module Game.Components.Path
     ( Path(..)
@@ -6,7 +7,11 @@ module Game.Components.Path
     , pathStart
     , pathEnd
     , pathPoint
+    , segments
     ) where
+
+
+import Control.Lens
 
 import Linear.V2
 import Linear.Metric
@@ -15,7 +20,9 @@ import Linear.Vector
 import Game.Util
 import Game.Type
 
-data Path = Path { segments :: [Segment] }
+data Path = Path
+    { _segments :: [Segment] }
+makeLenses ''Path
 
 createPath :: [Float2] -> Path
 createPath points = Path (pathInsertCornersInit points)
@@ -23,13 +30,13 @@ createPath points = Path (pathInsertCornersInit points)
 --path = [Spherical (V2 (-360) (-240), V2 360 (-240), V2 0 (-480))]
 
 pathLength :: Path -> Float
-pathLength path = sum $ map segmentLength (segments path)
+pathLength path = sum $ map segmentLength (path ^. segments)
 
 pathStart :: Path -> Float2
-pathStart path = segmentStart $ head (segments path)
+pathStart path = segmentStart $ head (path ^. segments)
 
 pathEnd :: Path -> Float2
-pathEnd path = segmentStart $ last (segments path)
+pathEnd path = segmentStart $ last (path ^. segments)
 
 pathRadius :: Float
 pathRadius = 20

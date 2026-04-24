@@ -26,3 +26,4 @@
 - [X] Enemy rendering
 - [X] Add dependency: linear
 - [X] Refactor into modules
+- [X] Add dependency: lens

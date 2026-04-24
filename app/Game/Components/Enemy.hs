@@ -1,16 +1,31 @@
-module Game.Components.Enemy (Enemy(..), defaultEnemy, alive) where
+{-# LANGUAGE TemplateHaskell #-}
+module Game.Components.Enemy
+    (Enemy(..)
+    , defaultEnemy
+    , alive
+    , progress
+    , position
+    , health
+    ) where
+
+import Control.Lens
 
 import Game.Util
 
-data Enemy = Enemy { progress :: Float, position :: Maybe Float2, health :: Float }
+data Enemy = Enemy
+    { _progress :: Float
+    , _position :: Maybe Float2
+    , _health :: Float
+    }
+makeLenses ''Enemy
 
 defaultEnemy :: Enemy
 defaultEnemy = Enemy
-    { progress = 0
-    , position = Nothing
-    , health = 20
+    { _progress = 0
+    , _position = Nothing
+    , _health = 20
     }
 
 alive :: Enemy -> Bool
-alive enemy = 0 < health enemy
+alive enemy = enemy ^. health < 0
 

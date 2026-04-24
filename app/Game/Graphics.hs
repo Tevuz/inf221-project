@@ -1,8 +1,9 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 module Game.Graphics (drawEnemy, drawPath, drawTower) where
 
+import Control.Lens
+
 import Graphics.Gloss
-import Linear.Vector
 import Linear.Metric
 
 import Game.Util
@@ -13,12 +14,12 @@ import Game.Components.Tower as Tower
 import Game.Components.Path as Path
 
 drawEnemy :: Time -> [Segment] -> Enemy -> Picture
-drawEnemy time path enemy
+drawEnemy _ path enemy
     | Just pos <- position = uncurry translate (toPair pos) $ color col $ Circle 16
     | otherwise = Blank
     where
-        position = pathPoint path $ progress enemy
-        col = makeColor 1.0 (health enemy / 20.0) 0.0 1.0
+        position = pathPoint path $ enemy ^. progress
+        col = makeColor 1.0 (enemy ^. health / 20.0) 0.0 1.0
 
 drawPath :: [Segment] -> Picture
 drawPath [] = Blank
@@ -40,14 +41,14 @@ drawPath (Spherical (p, q, c) : tail) = Pictures
 drawTower :: Time -> Tower -> Picture
 drawTower time tower =
     Pictures
-    [   uncurry translate (toPair $ Tower.position tower) $ Pictures
+    [   uncurry translate (toPair $ tower ^. Tower.position) $ Pictures
         [   color white $ Line [ (-20, -20), (20, -20), (20, 20), (-20, 20), (-20, -20) ]
         ,   color white $ Circle 20
-        ,   color cyan $ Circle (range tower)
+        ,   color cyan $ Circle (tower ^. range)
         ,   color white $ Line [ (0, 0), (sin (time * 3.1415 / 60.0) * 20, cos (time * 3.1415 / 60.0) * 20) ]
         ]
-    ,   let ep = Enemy.position <$> target tower
-            tp = toPair $ Tower.position tower
+    ,   let ep = tower ^? target . _Just . Enemy.position
+            tp = toPair $ tower ^. Tower.position
         in case ep of
             Just (Just ep) -> color cyan $ Line [tp, toPair ep]
             _ -> Blank
