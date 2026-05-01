@@ -2,11 +2,13 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 module Game.Components.Tower
     ( Tower(..)
-    , createTower
     , position
     , range
     , area
-    , target
+    , targets
+    , calcArea
+    , TowerId(..)
+    , Game.Components.Tower.entityId
     ) where
 
 import Control.Lens
@@ -20,16 +22,17 @@ import Game.Type
 import Game.Components.Enemy hiding (position)
 import Game.Components.Path
 
+newtype TowerId = TowerId Int
+    deriving (Show, Eq, Ord)
+
 data Tower = Tower
-    { _position :: Float2
+    { _entityId :: TowerId
+    , _position :: Float2
     , _range :: Float
     , _area :: [(Float, Float)]
-    , _target :: Maybe Enemy
-    }
+    , _targets :: [EnemyId]
+    } deriving (Show)
 makeLenses ''Tower
-
-createTower :: (Float, Float) -> Float -> Path -> Tower
-createTower pos range path = Tower (uncurry V2 pos) range (calcArea path pos range) Nothing
 
 calcArea :: Path -> (Float, Float) -> Float -> [(Float, Float)]
 calcArea path (x, y) range = pairwise

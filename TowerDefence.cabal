@@ -23,15 +23,18 @@ executable TowerDefence
                       Game.Type
                       Game.Graphics
                       Game.Game
+                      Game.Entity
                       Game.Components.Enemy
                       Game.Components.Path
                       Game.Components.Tower
                       Game.Components.GameState
                       Game.Systems.EnemyUpdate
+                      Game.Systems.TowerAttack
                       Game.Systems.TowerTargeting
     -- other-extensions:
     build-depends:
-        base ^>=4.18.3.0,
+        base,
+        containers,
         gloss,
         linear,
         lens

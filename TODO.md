@@ -6,15 +6,13 @@
 ### To do
 - [ ] Add dependency: yampa
 - [ ] Tilemap
-- [ ] Tower Placement
 - [ ] Tower Upgrades
 - [ ] User interface
 - [ ] Waves
-- [ ] Win & loss condition
 
 ### In progress
-- [ ] Enemy Health
-- [ ] Tower Attack
+- [ ] Tower Placement
+- [ ] Win & loss condition
 
 ### Done
 - [X] Setup dev environment
@@ -27,3 +25,5 @@
 - [X] Add dependency: linear
 - [X] Refactor into modules
 - [X] Add dependency: lens
+- [X] Enemy Health
+- [X] Tower Attack

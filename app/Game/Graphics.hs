@@ -45,13 +45,12 @@ drawTower time tower =
         [   color white $ Line [ (-20, -20), (20, -20), (20, 20), (-20, 20), (-20, -20) ]
         ,   color white $ Circle 20
         ,   color cyan $ Circle (tower ^. range)
-        ,   color white $ Line [ (0, 0), (sin (time * 3.1415 / 60.0) * 20, cos (time * 3.1415 / 60.0) * 20) ]
         ]
-    ,   let ep = tower ^? target . _Just . Enemy.position
-            tp = toPair $ tower ^. Tower.position
-        in case ep of
-            Just (Just ep) -> color cyan $ Line [tp, toPair ep]
-            _ -> Blank
+--    ,   let ep = tower ^? target . _Just . Enemy.position
+--            tp = toPair $ tower ^. Tower.position
+--        in case ep of
+--            Just (Just ep) -> color cyan $ Line [tp, toPair ep]
+--            _ -> Blank
     ]
 
 --inRange :: Time -> Enemy -> Tower -> Bool

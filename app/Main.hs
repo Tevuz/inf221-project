@@ -8,7 +8,7 @@ import Graphics.Gloss
 import Game.Game
 
 main :: IO ()
-main = play window background 60 initial render input update
+main = play window background 60 initialize render input update
 
 window :: Display
 window = InWindow "Tower Defence" (800, 600) (100, 100)

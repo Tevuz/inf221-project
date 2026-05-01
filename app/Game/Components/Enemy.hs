@@ -1,31 +1,29 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Game.Components.Enemy
     (Enemy(..)
-    , defaultEnemy
     , alive
     , progress
     , position
     , health
+    , EnemyId(..)
+    , entityId
     ) where
 
 import Control.Lens
 
 import Game.Util
 
+newtype EnemyId = EnemyId Int
+    deriving (Show, Eq, Ord)
+
 data Enemy = Enemy
-    { _progress :: Float
+    { _entityId :: EnemyId
+    , _progress :: Float
     , _position :: Maybe Float2
     , _health :: Float
-    }
+    } deriving (Show)
 makeLenses ''Enemy
 
-defaultEnemy :: Enemy
-defaultEnemy = Enemy
-    { _progress = 0
-    , _position = Nothing
-    , _health = 20
-    }
-
 alive :: Enemy -> Bool
-alive enemy = enemy ^. health < 0
+alive enemy = 0 < enemy ^. health
 
