@@ -51,7 +51,7 @@ defaultEnemy = Enemy
     { Enemy._entityId = EnemyId 0
     , _progress = 0
     , Enemy._position = Nothing
-    , _health = 20
+    , _health = 30
     }
 
 addEnemy :: Enemy -> GameState -> GameState
